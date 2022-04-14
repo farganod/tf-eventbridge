@@ -1,4 +1,4 @@
-# Demo on how to use Terraform to setup EventBridge Cron Jon to Trigger Lambda
+# Demo on how to use Terraform to setup EventBridge Cron Job to Trigger Lambda
 
 This code base provides a quick demo on leveraging Terraform as infrastructure as code (IaC) to deploy, manage, and integrate EventBridge rules with Lambda functions
 
