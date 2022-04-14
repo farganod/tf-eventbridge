@@ -72,7 +72,7 @@ resource "aws_cloudwatch_event_rule" "cron_job" {
   name        = "${var.function_name}_rule"
   description = "Cron Job to Trigger Lambda"
 
-  schedule_expression = "cron(0 12,16,20 * * ? *)"
+  schedule_expression = "cron(${var.cron})"
 }
 
 resource "aws_cloudwatch_event_target" "lambda_target" {
