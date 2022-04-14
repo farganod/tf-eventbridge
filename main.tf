@@ -1,14 +1,18 @@
 # Pulls the information from current account and region deploying to
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
+# Package the lambda code
+data "archive_file" "zipit" {
+  type        = "zip"
+  source_file = "lambda_function.py"
+  output_path = "lambda_function_payload.zip"
+}
 
 resource "aws_iam_policy" "lambda_policy" {
   name        = "${var.function_name}_policy"
   path        = "/"
   description = "lambda permission policy"
 
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
   policy = <<EOF
 {
     "Version": "2012-10-17",
@@ -58,8 +62,21 @@ resource "aws_lambda_function" "eb_lambda" {
   function_name = var.function_name
   role          = aws_iam_role.iam_for_lambda.arn
   handler       = "lambda_function.lambda_handler"
-  source_code_hash = filebase64sha256("lambda_function_payload.zip")
+  source_code_hash = data.archive_file.zipit.output_base64sha256
 
   runtime = "python3.9"
 
+}
+
+resource "aws_cloudwatch_event_rule" "cron_job" {
+  name        = "${var.function_name}_rule"
+  description = "Cron Job to Trigger Lambda"
+
+  schedule_expression = "cron(0 12,16,20 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "lambda_target" {
+  rule      = aws_cloudwatch_event_rule.cron_job.name
+  target_id = "SendToLambda"
+  arn       = aws_lambda_function.eb_lambda.arn
 }
