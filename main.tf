@@ -8,6 +8,7 @@ data "archive_file" "zipit" {
   output_path = "lambda_function_payload.zip"
 }
 
+# Default role policy for lambda to allow it to send logs to CloudWatch
 resource "aws_iam_policy" "lambda_policy" {
   name        = "${var.function_name}_policy"
   path        = "/"
@@ -37,6 +38,7 @@ resource "aws_iam_policy" "lambda_policy" {
 EOF
 }
 
+# Role creation for Lambda allowing the lambda serivce to assume the attached permissions
 resource "aws_iam_role" "iam_for_lambda" {
   name = "${var.function_name}_role"
   managed_policy_arns = [aws_iam_policy.lambda_policy.arn]  
@@ -57,6 +59,7 @@ resource "aws_iam_role" "iam_for_lambda" {
 EOF
 }
 
+# Creation of the lambda function
 resource "aws_lambda_function" "eb_lambda" {
   filename      = "lambda_function_payload.zip"
   function_name = var.function_name
@@ -68,6 +71,7 @@ resource "aws_lambda_function" "eb_lambda" {
 
 }
 
+# Creation of the Event rule
 resource "aws_cloudwatch_event_rule" "cron_job" {
   name        = "${var.function_name}_rule"
   description = "Cron Job to Trigger Lambda"
@@ -75,8 +79,18 @@ resource "aws_cloudwatch_event_rule" "cron_job" {
   schedule_expression = "cron(${var.cron})"
 }
 
+# Creating the lambda target for the rule
 resource "aws_cloudwatch_event_target" "lambda_target" {
   rule      = aws_cloudwatch_event_rule.cron_job.name
   target_id = "SendToLambda"
   arn       = aws_lambda_function.eb_lambda.arn
+}
+
+# Permissions to allow cloudwatch to invoke the lambda 
+resource "aws_lambda_permission" "allow_cloudwatch" {
+  statement_id  = "AllowExecutionFromCloudWatch"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.eb_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.cron_job.arn
 }
