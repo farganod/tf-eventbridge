@@ -73,24 +73,27 @@ resource "aws_lambda_function" "eb_lambda" {
 
 # Creation of the Event rule
 resource "aws_cloudwatch_event_rule" "cron_job" {
-  name        = "${var.function_name}_rule"
+  count = length(var.cron)
+  name        = "${var.function_name}_rule_${count.index}"
   description = "Cron Job to Trigger Lambda"
 
-  schedule_expression = "cron(${var.cron})"
+  schedule_expression = "cron(${var.cron[count.index]})"
 }
 
 # Creating the lambda target for the rule
 resource "aws_cloudwatch_event_target" "lambda_target" {
-  rule      = aws_cloudwatch_event_rule.cron_job.name
+  count = length(var.cron)
+  rule      = aws_cloudwatch_event_rule.cron_job[count.index].name
   target_id = "SendToLambda"
   arn       = aws_lambda_function.eb_lambda.arn
 }
 
 # Permissions to allow cloudwatch to invoke the lambda 
 resource "aws_lambda_permission" "allow_cloudwatch" {
-  statement_id  = "AllowExecutionFromCloudWatch"
+  count = length(var.cron)
+  statement_id  = "${var.function_name}_rule_${count.index}"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.eb_lambda.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.cron_job.arn
+  source_arn    = aws_cloudwatch_event_rule.cron_job[count.index].arn
 }
